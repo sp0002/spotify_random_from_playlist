@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+    <title>Pick which playlist</title>
+</head>
+<body>
+    <div id="top">
+        <span id="top_name">Playlist to playlist randomizer</span>
+        <div id="top_links">
+            <a id="home" href="/">Home</a>
+            <span> | </span>
+            <a id="logout" href="/logout">Logout</a>
+        </div>
+    </div>
+
+    <div id="info_container1">
+        <div id="info_container2">
+            <div id="info_container3">
+                <div id="description">
+                    Choose the playlist you want to get 100 random songs from. Only playlists with more than 100 songs will be shown.
+                </div>
+                <div id="content">
+                    <form method="post" action="/playlist_picked">
+                        {% for playlist in playlists %}
+                            <div class="playlist_container">
+                                <img src="{{ playlist['img'] }}">
+                                <input type="radio" name="playlist_option" id="{{ playlist["id"] }}" value="{{ playlist["id"] }} | {{ playlist["total_tracks"] }}" required>
+                                <label for="{{ playlist["id"] }}">{{ playlist["name"] }}</label>
+                                <p>{{ playlist["total_tracks"] }} tracks</p>
+                            </div>
+                        {% endfor %}
+                        <input type="submit">
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

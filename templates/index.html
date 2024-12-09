@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+    <style>
+        html {
+            height: 100%;
+        }
+    </style>
+    <title>Link your spotify Account</title>
+</head>
+<body>
+    <div id="top">
+        <span id="top_name">Playlist to playlist randomizer</span>
+    </div>
+
+    <div id="info_container1">
+        <div id="info_container2">
+            <div id="info_container3">
+                <div id="description">
+                    This is a web application that randomly chooses 100 songs from your specified playlist and puts it into a new playlist.
+                </div>
+                <div>
+                    <br><br>
+                </div>
+                <div>
+                    <a id="login_button" href="/login">Click here to log in to Spotify.</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

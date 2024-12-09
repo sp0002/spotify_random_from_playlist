@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+    <title>Playlist Confirmation</title>
+</head>
+<body>
+    <div id="top">
+        <span id="top_name">Playlist to playlist randomizer</span>
+        <div id="top_links">
+            <a id="home" href="/">Home</a>
+            <span> | </span>
+            <a id="logout" href="/logout">Logout</a>
+        </div>
+    </div>
+
+    <div id="info_container1">
+        <div id="info_container2">
+            <div id="info_container3">
+                <div id="description">
+                    Confirmation:
+                </div>
+                <div id="content">
+                    {% if selected_playlist_id == '' %}
+                        <p>Create new playlist: {{ selected_playlist_name }}.</p>
+                    {% else %}
+                        <p>Replace playlist: {{ selected_playlist_name }}/</p>
+                    {% endif %}
+                    <br/>
+                    <form method="post" action="/add_songs">
+                        <input type="hidden" name="playlist_id" value="{{ selected_playlist_id }}">
+                        <input type="hidden" name="playlist_name" value="{{ selected_playlist_name }}">
+                        <div id="confirmation_buttons">
+                            <button id="confirm_playlist_confirm" type="submit">Confirm</button>
+                            <a id="confirm_playlist_change" href="/playlist_for_songs">Choose a different playlist</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
