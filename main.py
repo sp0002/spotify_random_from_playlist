@@ -1,3 +1,4 @@
+import json
 import random
 import sqlite3
 import secrets
@@ -16,6 +17,7 @@ config = dotenv_values(path)  # Import .env as dictionary
 CLIENT_ID = config["CLIENT_ID"]
 CLIENT_SECRET = config["CLIENT_SECRET"]
 REDIRECT_URI = config["REDIRECT_URI"]
+NUM_SONGS = int(config["NUM_SONGS"])
 
 # URLS
 AUTH_URL = 'https://accounts.spotify.com/authorize'
@@ -210,14 +212,13 @@ def playlist_picker():
                           res.status_code)
                     return redirect(url_for('logout'))
 
-                else:
+                elif res.status_code == 200:
                     for i in res_data.get('items', None):
                         if i:
-                            if int(i["tracks"]["total"]) > 100:
+                            if int(i["tracks"]["total"]) > NUM_SONGS:
                                 playlists.append({
                                     "id": i["id"],
-                                    "img": i["images"][-1]["url"] if i["images"] else "{{ url_for('static', "
-                                                                                      "filename='no_img.png') }}",
+                                    "img": i["images"][-1]["url"] if i["images"] else "no_img",
                                     # Might be empty.
                                     "name": i["name"],
                                     "total_tracks": i["tracks"]["total"],
@@ -240,7 +241,7 @@ def playlist_picked():
             picked_songs = []
             next_url = f'https://api.spotify.com/v1/playlists/{playlist_id}'
             random.seed(secrets.randbelow(100000))
-            picked_tracks = deque(sorted(random.sample(range(0, num_tracks), 100)))
+            picked_tracks = deque(sorted(random.sample(range(0, num_tracks), NUM_SONGS)))
 
             while next_url and picked_tracks:
                 res = requests.get(next_url, headers=headers)
@@ -259,7 +260,7 @@ def playlist_picked():
                     print('Failed to get profile info:', res_data.get('error', 'No error message returned.'))
                     return redirect(url_for('logout'))
 
-                else:
+                elif res.status_code == 200:
                     if num_tracks > 100:
                         i = res_data.get('tracks')
                     else:
@@ -272,9 +273,9 @@ def playlist_picked():
                                     "id": songs[picked_tracks[0]]["track"]["id"],
                                     # img might be empty.
                                     "img": songs[picked_tracks[0]]["track"]["album"]["images"][-1]["url"] if \
-                                    songs[picked_tracks[0]]["track"]["album"]["images"] else \
-                                    "{{ url_for('static', filename='no_img.png') }}",
+                                    songs[picked_tracks[0]]["track"]["album"]["images"] else "no_img",
                                     "name": songs[picked_tracks[0]]["track"]["name"],
+                                    "uri": songs[picked_tracks[0]]["track"]["uri"],
                                     "artists": ", ".join([artist["name"] for artist in \
                                                 songs[picked_tracks[0]]["track"]["artists"]])
                                 })
@@ -323,13 +324,12 @@ def playlist_for_songs():
                           res.status_code)
                     return redirect(url_for('logout'))
 
-                else:
+                elif res.status_code == 200:
                     for i in res_data.get('items', None):
                         if i:
                             playlists.append({
                                 "id": i["id"],
-                                "img": i["images"][-1]["url"] if i["images"] else "{{ url_for('static', "
-                                                                                  "filename='no_img.png') }}",
+                                "img": i["images"][-1]["url"] if i["images"] else "no_img",
                                 # Might be empty.
                                 "name": i["name"],
                                 "total_tracks": i["tracks"]["total"],
@@ -373,17 +373,23 @@ def add_songs():
             if request.method == 'POST':
                 playlist_id = request.form.get('playlist_id', None)
                 playlist_name = request.form.get('playlist_name', None)
-                if playlist_id and playlist_name:
-                    if playlist_id == '':  # Create new playlist
-                        headers = {'Authorization': f"Bearer {current_user.access_token}"}
+                print("posted", playlist_id, playlist_name)
+
+                if playlist_id or playlist_name:
+                    if playlist_id == '' or playlist_id is None:  # Create new playlist
+                        headers = {
+                            'Authorization': f"Bearer {current_user.access_token}",
+                            'Content-Type': 'application/json'
+                        }
                         next_url = f'https://api.spotify.com/v1/users/{current_user.u_id}/playlists'
-                        payload = {
+                        payload = json.dumps({
                             "name": playlist_name,
                             "description": "Custom playlist",
                             "public": False
-                        }
-                        res = requests.get(next_url, headers=headers, payload=payload)
+                        })
+                        res = requests.post(next_url, headers=headers, data=payload)
                         res_data = res.json()
+                        print(res_data, 'aaaaaaaaa')
 
                         if res.status_code == 401:
                             print('Failed to get profile info:',
@@ -395,46 +401,53 @@ def add_songs():
                             else:
                                 return redirect(url_for('logout'))
 
-                        elif res.status_code != 200:
+                        elif res.status_code != 201:
                             print('Failed to get profile info:',
-                                  res_data.get('error', 'No error message returned.'))
+                                  res_data.get('error', 'No error message returned. 1'), res.status_code)
                             return redirect(url_for('logout'))
 
-                        else:
-                            new_playlist_id = res_data.get('id')
-                            else:
-                                i = res_data
-                            if i:
-                                songs = i['items']
-                                if songs:
-                                    while picked_tracks and picked_tracks[0] < 100:
-                                        picked_songs.append({
-                                            "id": songs[picked_tracks[0]]["track"]["id"],
-                                            # img might be empty.
-                                            "img": songs[picked_tracks[0]]["track"]["album"]["images"][-1]["url"] if \
-                                                songs[picked_tracks[0]]["track"]["album"]["images"] else \
-                                                "{{ url_for('static', filename='no_img.png') }}",
-                                            "name": songs[picked_tracks[0]]["track"]["name"],
-                                            "artists": ", ".join([artist["name"] for artist in \
-                                                                  songs[picked_tracks[0]]["track"]["artists"]])
-                                        })
-                                        picked_tracks.popleft()
-                                next_url = i.get('next', None)
+                        elif res.status_code == 201:
+                            playlist_id = res_data.get('id')
 
-                                for j in range(len(picked_tracks)):
-                                    picked_tracks[j] -= 100
-                                num_tracks -= 100
+                    if not playlist_id:
+                        return redirect(url_for('index'))
+                    else:
+                        headers = {'Authorization': f"Bearer {current_user.access_token}"}
+                        next_url = f'https://api.spotify.com/v1/playlists/{playlist_id}'
+                        tracks = deque()
 
-                    user_store[current_user.u_id]["picked_songs"] = picked_songs
+                        while next_url:
+                            res = requests.get(next_url, headers=headers)
+                            res_data = res.json()
 
-                    selected_playlist_id, selected_playlist_name = selected_playlist.split(' || ')
-                    return render_template('confirm_playlist_song.html',
-                                           selected_playlist_id=selected_playlist_id,
-                                           selected_playlist_name=selected_playlist_name)
-                elif new_playlist_name:
-                    return render_template('confirm_playlist_song.html',
-                                           selected_playlist_id='',
-                                           selected_playlist_name=new_playlist_name)
+                            if res.status_code == 401:
+                                print('Failed to get profile info:',
+                                      res_data.get('error', 'No error message returned.'))
+                                new_token = refresh(current_user.refresh_token)
+                                if new_token:
+                                    user_store[current_user.u_id]["access_token"] = new_token
+                                    current_user.access_token = new_token
+                                else:
+                                    return redirect(url_for('logout'))
+
+                            elif res.status_code != 200:
+                                print('Failed to get profile info:',
+                                      res_data.get('error', 'No error message returned.'))
+                                return redirect(url_for('logout'))
+
+                            elif res.status_code == 200:
+                                if res_data.get('tracks', None):
+                                    i = res_data.get('tracks')
+                                else:
+                                    i = res_data
+                                if i:
+                                    songs = i['items']
+                                    if songs:
+                                        for song in songs:
+                                            tracks.append(songs[song[0]]["track"]["uri"])
+
+                                    next_url = i.get('next', None)
+
             return redirect(url_for('index'))
     else:
         return redirect(url_for('index'))
