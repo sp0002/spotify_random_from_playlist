@@ -198,7 +198,7 @@ def playlist_picker():
 
                 if res.status_code == 401:
                     print('Failed to get profile info:', res_data.get('error', 'No error message returned.'),
-                          res.status_code)
+                          res.status_code, "playlist picker")
                     new_token = refresh(current_user.refresh_token)
                     if new_token:
                         user_store[current_user.u_id]["access_token"] = new_token
@@ -242,10 +242,12 @@ def playlist_picked():
             next_url = f'https://api.spotify.com/v1/playlists/{playlist_id}'
             random.seed(secrets.randbelow(100000))
             picked_tracks = deque(sorted(random.sample(range(0, num_tracks), NUM_SONGS)))
+            latch = False  # Only the first url without offset returns extra data.
 
             while next_url and picked_tracks:
                 res = requests.get(next_url, headers=headers)
                 res_data = res.json()
+                print(res.status_code, "code")
 
                 if res.status_code == 401:
                     print('Failed to get profile info:', res_data.get('error', 'No error message returned.'))
@@ -261,14 +263,18 @@ def playlist_picked():
                     return redirect(url_for('logout'))
 
                 elif res.status_code == 200:
-                    if num_tracks > 100:
-                        i = res_data.get('tracks')
-                    else:
+                    if latch:
                         i = res_data
+                    else:
+                        latch = True
+                        i = res_data.get('tracks')
                     if i:
+                        print(i, "i")
                         songs = i['items']
                         if songs:
+                            b = 0
                             while picked_tracks and picked_tracks[0] < 100:
+                                print(b)
                                 picked_songs.append({
                                     "id": songs[picked_tracks[0]]["track"]["id"],
                                     # img might be empty.
@@ -280,6 +286,7 @@ def playlist_picked():
                                                 songs[picked_tracks[0]]["track"]["artists"]])
                                 })
                                 picked_tracks.popleft()
+                                b += 1
                         next_url = i.get('next', None)
 
                         for j in range(len(picked_tracks)):

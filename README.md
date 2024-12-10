@@ -43,3 +43,6 @@ Change NUM_SONGS in .env
 
 ## Assumptions
 You have Spotify premium.
+
+## Expanding
+This was made for single/small amounts of users. If you are supporting more users, consider using more database operations (like Redis) to cache songs and playlists to avoid running into rate limits and other problems. 
