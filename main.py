@@ -247,7 +247,6 @@ def playlist_picked():
             while next_url and picked_tracks:
                 res = requests.get(next_url, headers=headers)
                 res_data = res.json()
-                print(res.status_code, "code")
 
                 if res.status_code == 401:
                     print('Failed to get profile info:', res_data.get('error', 'No error message returned.'))
@@ -269,12 +268,10 @@ def playlist_picked():
                         latch = True
                         i = res_data.get('tracks')
                     if i:
-                        print(i, "i")
                         songs = i['items']
                         if songs:
                             b = 0
                             while picked_tracks and picked_tracks[0] < 100:
-                                print(b)
                                 picked_songs.append({
                                     "id": songs[picked_tracks[0]]["track"]["id"],
                                     # img might be empty.
@@ -340,6 +337,7 @@ def playlist_for_songs():
                                 # Might be empty.
                                 "name": i["name"],
                                 "total_tracks": i["tracks"]["total"],
+                                "snapshot_id": i["snapshot_id"]
                             })
                     next_url = res_data.get('next', None)
 
@@ -358,14 +356,16 @@ def confirm_playlist_song():
                 selected_playlist = request.form.get('playlist_option', None)
                 new_playlist_name = request.form.get('new_playlist_name', None)
                 if selected_playlist:
-                    selected_playlist_id, selected_playlist_name = selected_playlist.split(' || ')
+                    selected_playlist_id, selected_playlist_name, snapshot_id = selected_playlist.split(' || ')
                     return render_template('confirm_playlist_song.html',
                                            selected_playlist_id=selected_playlist_id,
-                                           selected_playlist_name=selected_playlist_name)
+                                           selected_playlist_name=selected_playlist_name,
+                                           snapshot_id=snapshot_id)
                 elif new_playlist_name:
                     return render_template('confirm_playlist_song.html',
                                            selected_playlist_id='',
-                                           selected_playlist_name=new_playlist_name)
+                                           selected_playlist_name=new_playlist_name,
+                                           snapshot_id='')
             return redirect(url_for('index'))
     else:
         return redirect(url_for('index'))
@@ -380,7 +380,7 @@ def add_songs():
             if request.method == 'POST':
                 playlist_id = request.form.get('playlist_id', None)
                 playlist_name = request.form.get('playlist_name', None)
-                print("posted", playlist_id, playlist_name)
+                snapshot_id = request.form.get('snapshot_id', None)
 
                 if playlist_id or playlist_name:
                     if playlist_id == '' or playlist_id is None:  # Create new playlist
@@ -396,7 +396,6 @@ def add_songs():
                         })
                         res = requests.post(next_url, headers=headers, data=payload)
                         res_data = res.json()
-                        print(res_data, 'aaaaaaaaa')
 
                         if res.status_code == 401:
                             print('Failed to get profile info:',
@@ -417,8 +416,9 @@ def add_songs():
                             playlist_id = res_data.get('id')
 
                     if not playlist_id:
+                        print("no id")
                         return redirect(url_for('index'))
-                    else:
+                    else:  # Let's delete everything in the playlist, then add the new songs.
                         headers = {'Authorization': f"Bearer {current_user.access_token}"}
                         next_url = f'https://api.spotify.com/v1/playlists/{playlist_id}'
                         tracks = deque()
@@ -451,9 +451,51 @@ def add_songs():
                                     songs = i['items']
                                     if songs:
                                         for song in songs:
-                                            tracks.append(songs[song[0]]["track"]["uri"])
+                                            tracks.append(song["track"]["uri"])
 
                                     next_url = i.get('next', None)
+
+                        while tracks:
+                            tracks_to_delete = []
+                            count = 100
+                            while count != 0 and tracks:
+                                tracks_to_delete.append({'uri': tracks.popleft()})
+                                count -= 1
+
+                            headers = {
+                                'Authorization': f"Bearer {current_user.access_token}",
+                                'Content-Type': 'application/json'
+                            }
+
+                            payload = {
+                                'tracks': tracks_to_delete,
+                                'snapshot_id': snapshot_id
+                            }
+
+                            next_url = f'https://api.spotify.com/v1/playlists/{playlist_id}/tracks'
+                            res = requests.delete(next_url, headers=headers, json=payload)
+                            res_data = res.json()
+
+                            if res.status_code == 401:
+                                print('Failed to get profile info:',
+                                      res_data.get('error', 'No error message returned.'))
+                                new_token = refresh(current_user.refresh_token)
+                                if new_token:
+                                    user_store[current_user.u_id]["access_token"] = new_token
+                                    current_user.access_token = new_token
+                                else:
+                                    return redirect(url_for('logout'))
+
+                            elif res.status_code != 200:
+                                print('Failed to get profile info:',
+                                      res_data.get('error', 'No error message returned.'))
+                                return redirect(url_for('logout'))
+
+                            elif res.status_code == 200:
+                                snapshot_id = res_data.get('snapshot_id', None)
+
+                            # Insertion code here
+                            return "hi"
 
             return redirect(url_for('index'))
     else:
