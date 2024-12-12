@@ -1,6 +1,9 @@
 # spotify_random_from_playlist
 Create/replace a playlist with n random songs from another playlist.
 
+## Unresolved
+When access token expires (1 hour), the token refresh logic is not fully working.
+
 ## Configuring Spotify's side
 Go to https://developer.spotify.com/ and log in. You can use the same account you use for listening to songs.
 

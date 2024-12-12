@@ -97,7 +97,8 @@ form {
   flex-direction: row;
   height: 15%;
   width: 100%;
-  margin: 5px;
+  align-items: stretch;
+  justify-content: center;
 }
 
 .playlist_container input[type="radio"] {
@@ -106,24 +107,37 @@ form {
 }
 
 .playlist_container label {
-  border: 3px solid #ededbb;
   width: 60%;
   padding: 8px 12px;
   display: inline-block;
+  border-width: 5px 0 0 5px;
+  border-style: solid;
+  border-color: #ededbb;
+  margin: 0;
 }
 
 .playlist_container img {
-  width: 15%;
-  max-width: 3.5vw;
-  max-height: 3.5vw;
+  width: 100%;
+  max-width: 4vw;
+  max-height: 4vw;
 }
 
-.playlist_container p {
+.playlist_total_tracks {
   width: 10%;
+  border-width: 5px 5px 0 5px;
+  border-style: solid;
+  border-color: #ededbb;
+  margin: 0;
 }
 
 .playlist_container input[type="radio"]:checked + label {
   background-color: #ededbb;
+}
+
+.playlist_container:last-child p, .playlist_container:last-child label{
+  border-bottom: 5px;
+  border-style: solid;
+  border-color: #ededbb;
 }
 
 .songs_container {
@@ -132,11 +146,13 @@ form {
   height: 15%;
   width: 100%;
   align-items: stretch;
+  justify-content: center;
 }
 
 .songs_container img {
-  max-width: 3.5vw;
-  max-height: 3.5vw;
+  width: 100%;
+  max-width: 4vw;
+  max-height: 4vw;
 }
 
 .song_img_container {

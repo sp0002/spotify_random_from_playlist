@@ -24,14 +24,20 @@
                 </div>
                 <div id="content">
                     <form method="post" action="/playlist_picked">
-                        {% for playlist in playlists %}
-                            <div class="playlist_container">
-                                <img src="{{ playlist['img'] }}">
-                                <input type="radio" name="playlist_option" id="{{ playlist["id"] }}" value="{{ playlist["id"] }} | {{ playlist["total_tracks"] }}" required>
-                                <label for="{{ playlist["id"] }}">{{ playlist["name"] }}</label>
-                                <p>{{ playlist["total_tracks"] }} tracks</p>
-                            </div>
-                        {% endfor %}
+                        <div id="playlist_list">
+                            {% for playlist in playlists %}
+                                <div class="playlist_container">
+                                    {% if playlist['img'] == 'no_img' %}
+                                        <p class="song_img_container"><img src="{{ url_for('static', filename='no_img.png') }}" alt="Playlist image"></p>
+                                    {% else %}
+                                        <p class="song_img_container"><img src="{{ playlist['img'] }}" alt="Playlist image"></p>
+                                    {% endif %}
+                                    <input type="radio" name="playlist_option" id="{{ playlist["id"] }}" value="{{ playlist["id"] }} | {{ playlist["total_tracks"] }}" required>
+                                    <label class="playlist_name" for="{{ playlist["id"] }}">{{ playlist["name"] }}</label>
+                                    <p class="playlist_total_tracks">{{ playlist["total_tracks"] }} tracks</p>
+                                </div>
+                            {% endfor %}
+                        </div>
                         <input type="submit">
                     </form>
                 </div>

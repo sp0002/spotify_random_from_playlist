@@ -65,8 +65,8 @@ def load_user(u_id):
         if result:
             access_token = refresh(result[1])
             if access_token:
-                user_store[u_id] = {"access_token": access_token, "refresh_token": result[1]}
-                return User(result[0], result[1], refresh(result[1]))
+                user_store[u_id] = {"refresh_token": result[1], "access_token": access_token}
+                return User(result[0], result[1], access_token)
     return
 
 
@@ -86,6 +86,7 @@ def refresh(refresh_token):
     )
     res_data = res.json()
     if res_data.get('error') or res.status_code != 200:
+        print("Error", res_data.get('error', "Unknown error"), res.status_code)
         return None
 
     return res_data.get('access_token')
@@ -149,9 +150,7 @@ def callback():
     res_data = res.json()
 
     if res_data.get('error') or res.status_code != 200:
-        print(
-            'Failed to receive token:', res_data.get('error', 'No error information received.')
-        )
+        print('Failed to receive token:', res_data.get('error', 'No error information received.'))
         return redirect(url_for('logout'))
 
     refresh_token = res_data.get('refresh_token')
@@ -162,7 +161,7 @@ def callback():
     res2_data = res.json()
 
     if res.status_code != 200:
-        print('Failed to get profile info:', res_data.get('error', 'No error message returned.'), res.status_code)
+        print('An error occurred:', res_data.get('error', 'No error message returned.'), res.status_code)
         return redirect(url_for('logout'))
 
     user_id = res2_data.get('id')
@@ -197,33 +196,39 @@ def playlist_picker():
                 res_data = res.json()
 
                 if res.status_code == 401:
-                    print('Failed to get profile info:', res_data.get('error', 'No error message returned.'),
+                    print('Bad or expired token:', res_data.get('error', 'No error message returned.'),
                           res.status_code, "playlist picker")
                     new_token = refresh(current_user.refresh_token)
                     if new_token:
                         user_store[current_user.u_id]["access_token"] = new_token
                         current_user.access_token = new_token
+                        res = requests.get(next_url, headers=headers)
+                        res_data = res.json()
+                        if res.status_code != 200:
+                            print('Error occurred even after access token refresh. Error:',
+                                  res_data.get('error', 'No error message returned.'), res.status_code)
+                            print(res_data, "data")
+                            return redirect(url_for('logout'))
                     else:
                         print('Failed to get access_token even after refresh.')
                         return redirect(url_for('logout'))
 
                 elif res.status_code != 200:
-                    print('Failed to get profile info:', res_data.get('error', 'No error message returned.'),
+                    print('An error occurred:', res_data.get('error', 'No error message returned.'),
                           res.status_code)
                     return redirect(url_for('logout'))
 
-                elif res.status_code == 200:
-                    for i in res_data.get('items', None):
-                        if i:
-                            if int(i["tracks"]["total"]) > NUM_SONGS:
-                                playlists.append({
-                                    "id": i["id"],
-                                    "img": i["images"][-1]["url"] if i["images"] else "no_img",
-                                    # Might be empty.
-                                    "name": i["name"],
-                                    "total_tracks": i["tracks"]["total"],
-                                })
-                    next_url = res_data.get('next', None)
+                for i in res_data.get('items', None):
+                    if i:
+                        if int(i["tracks"]["total"]) > NUM_SONGS:
+                            playlists.append({
+                                "id": i["id"],
+                                "img": i["images"][-1]["url"] if i["images"] else "no_img",
+                                # Might be empty.
+                                "name": i["name"],
+                                "total_tracks": i["tracks"]["total"],
+                            })
+                next_url = res_data.get('next', None)
 
             return render_template('playlist_picker.html', playlists=playlists)
     else:
@@ -249,16 +254,22 @@ def playlist_picked():
                 res_data = res.json()
 
                 if res.status_code == 401:
-                    print('Failed to get profile info:', res_data.get('error', 'No error message returned.'))
+                    print('Bad or expired token:', res_data.get('error', 'No error message returned.'))
                     new_token = refresh(current_user.refresh_token)
                     if new_token:
                         user_store[current_user.u_id]["access_token"] = new_token
                         current_user.access_token = new_token
+                        res = requests.get(next_url, headers=headers)
+                        res_data = res.json()
+                        if res.status_code != 200:
+                            print('Error occurred even after access token refresh. Error:',
+                                  res_data.get('error', 'No error message returned.'), res.status_code)
+                            return redirect(url_for('logout'))
                     else:
                         return redirect(url_for('logout'))
 
                 elif res.status_code != 200:
-                    print('Failed to get profile info:', res_data.get('error', 'No error message returned.'))
+                    print('An error occurred:', res_data.get('error', 'No error message returned.'))
                     return redirect(url_for('logout'))
 
                 elif res.status_code == 200:
@@ -313,18 +324,24 @@ def playlist_for_songs():
                 res_data = res.json()
 
                 if res.status_code == 401:
-                    print('Failed to get profile info:', res_data.get('error', 'No error message returned.'),
+                    print('Bad or expired token:', res_data.get('error', 'No error message returned.'),
                           res.status_code)
                     new_token = refresh(current_user.refresh_token)
                     if new_token:
                         user_store[current_user.u_id]["access_token"] = new_token
                         current_user.access_token = new_token
+                        res = requests.get(next_url, headers=headers)
+                        res_data = res.json()
+                        if res.status_code != 200:
+                            print('Error occurred even after access token refresh. Error:',
+                                  res_data.get('error', 'No error message returned.'), res.status_code)
+                            return redirect(url_for('logout'))
                     else:
                         print('Failed to get access_token even after refresh.')
                         return redirect(url_for('logout'))
 
                 elif res.status_code != 200:
-                    print('Failed to get profile info:', res_data.get('error', 'No error message returned.'),
+                    print('An error occurred:', res_data.get('error', 'No error message returned.'),
                           res.status_code)
                     return redirect(url_for('logout'))
 
@@ -398,26 +415,31 @@ def add_songs():
                         res_data = res.json()
 
                         if res.status_code == 401:
-                            print('Failed to get profile info:',
-                                  res_data.get('error', 'No error message returned.'))
+                            print('Bad or expired token:', res_data.get('error', 'No error message returned.'))
                             new_token = refresh(current_user.refresh_token)
                             if new_token:
                                 user_store[current_user.u_id]["access_token"] = new_token
                                 current_user.access_token = new_token
+                                res = requests.post(next_url, headers=headers, data=payload)
+                                res_data = res.json()
+                                if res.status_code != 200:
+                                    print('Error occurred even after access token refresh. Error:',
+                                          res_data.get('error', 'No error message returned.'), res.status_code)
+                                    return redirect(url_for('logout'))
                             else:
                                 return redirect(url_for('logout'))
 
                         elif res.status_code != 201:
-                            print('Failed to get profile info:',
+                            print('An error occurred:',
                                   res_data.get('error', 'No error message returned. 1'), res.status_code)
                             return redirect(url_for('logout'))
 
                         elif res.status_code == 201:
                             playlist_id = res_data.get('id')
 
-                    if not playlist_id:
-                        print("no id")
+                    if not playlist_id:  # No ID?
                         return redirect(url_for('index'))
+
                     else:  # Let's delete everything in the playlist, then add the new songs.
                         headers = {'Authorization': f"Bearer {current_user.access_token}"}
                         next_url = f'https://api.spotify.com/v1/playlists/{playlist_id}'
@@ -428,17 +450,23 @@ def add_songs():
                             res_data = res.json()
 
                             if res.status_code == 401:
-                                print('Failed to get profile info:',
+                                print('Bad or expired token:',
                                       res_data.get('error', 'No error message returned.'))
                                 new_token = refresh(current_user.refresh_token)
                                 if new_token:
                                     user_store[current_user.u_id]["access_token"] = new_token
                                     current_user.access_token = new_token
+                                    res = requests.get(next_url, headers=headers)
+                                    res_data = res.json()
+                                    if res.status_code != 200:
+                                        print('Error occurred even after access token refresh. Error:',
+                                              res_data.get('error', 'No error message returned.'), res.status_code)
+                                        return redirect(url_for('logout'))
                                 else:
                                     return redirect(url_for('logout'))
 
                             elif res.status_code != 200:
-                                print('Failed to get profile info:',
+                                print('An error occurred:',
                                       res_data.get('error', 'No error message returned.'))
                                 return redirect(url_for('logout'))
 
@@ -458,7 +486,7 @@ def add_songs():
                         while tracks:
                             tracks_to_delete = []
                             count = 100
-                            while count != 0 and tracks:
+                            while count != 0 and tracks:  # Only append 100 songs.
                                 tracks_to_delete.append({'uri': tracks.popleft()})
                                 count -= 1
 
@@ -477,27 +505,69 @@ def add_songs():
                             res_data = res.json()
 
                             if res.status_code == 401:
-                                print('Failed to get profile info:',
+                                print('Bad or expired token:',
                                       res_data.get('error', 'No error message returned.'))
                                 new_token = refresh(current_user.refresh_token)
                                 if new_token:
                                     user_store[current_user.u_id]["access_token"] = new_token
                                     current_user.access_token = new_token
+                                    res = requests.delete(next_url, headers=headers, json=payload)
+                                    res_data = res.json()
+                                    if res.status_code != 200:
+                                        print('Error occurred even after access token refresh. Error:',
+                                              res_data.get('error', 'No error message returned.'), res.status_code)
+                                        return redirect(url_for('logout'))
                                 else:
                                     return redirect(url_for('logout'))
 
                             elif res.status_code != 200:
-                                print('Failed to get profile info:',
+                                print('An error occurred:',
                                       res_data.get('error', 'No error message returned.'))
                                 return redirect(url_for('logout'))
 
                             elif res.status_code == 200:
                                 snapshot_id = res_data.get('snapshot_id', None)
 
-                            # Insertion code here
-                            return "hi"
 
-            return redirect(url_for('index'))
+                        # Insertion code here
+                        headers = {
+                            'Authorization': f"Bearer {current_user.access_token}",
+                            'Content-Type': 'application/json'
+                        }
+
+                        payload = {
+                            'uris': [i['uri'] for i in user_store[current_user.u_id]["picked_songs"]],
+                        }
+
+                        next_url = f'https://api.spotify.com/v1/playlists/{playlist_id}/tracks'
+                        res = requests.post(next_url, headers=headers, json=payload)
+                        res_data = res.json()
+
+                        if res.status_code == 401:
+                            print('Bad or expired token:',
+                                  res_data.get('error', 'No error message returned.'))
+                            new_token = refresh(current_user.refresh_token)
+                            if new_token:
+                                user_store[current_user.u_id]["access_token"] = new_token
+                                current_user.access_token = new_token
+                                res = requests.post(next_url, headers=headers, json=payload)
+                                res_data = res.json()
+                                if res.status_code != 200:
+                                    print('Error occurred even after access token refresh. Error:',
+                                          res_data.get('error', 'No error message returned.'), res.status_code)
+                                    return redirect(url_for('logout'))
+                            else:
+                                return redirect(url_for('logout'))
+
+                        elif res.status_code != 201:
+                            print('An error occurred:',
+                                  res_data.get('error', 'No error message returned.'))
+                            return redirect(url_for('logout'))
+
+                        elif res.status_code == 201:
+                            return render_template('generation_done.html',)
+
+        return redirect(url_for('index'))
     else:
         return redirect(url_for('index'))
 
@@ -516,6 +586,6 @@ def logout():
 
 
 if __name__ == '__main__':
-    app.run('0.0.0.0', 5005, ssl_context='adhoc', debug=True)
+    app.run('0.0.0.0', 5005, ssl_context='adhoc')
     # app.run('0.0.0.0', 5000, ssl_context=('cert.pem', 'key.pem'))
     mydb.close()

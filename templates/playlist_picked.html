@@ -26,7 +26,11 @@
                     <div id="songs_list">
                         {% for song in picked_songs %}
                             <div class="songs_container">
-                                <p class="song_img_container"><img src="{{ song['img'] }}" alt="Song cover image"></p>
+                                {% if song['img'] == 'no_img' %}
+                                    <p class="song_img_container"><img src="{{ url_for('static', filename='no_img.png') }}" alt="Song cover image"></p>
+                                {% else %}
+                                    <p class="song_img_container"><img src="{{ song['img'] }}" alt="Song cover image"></p>
+                                {% endif %}
                                 <p class="song_name">{{ song["name"] }}</p>
                                 <p class="song_artists">{{ song["artists"] }} </p>
                             </div>
