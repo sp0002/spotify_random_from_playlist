@@ -288,11 +288,11 @@ def playlist_picked():
                                     "id": songs[picked_tracks[0]]["track"]["id"],
                                     # img might be empty.
                                     "img": songs[picked_tracks[0]]["track"]["album"]["images"][-1]["url"] if \
-                                    songs[picked_tracks[0]]["track"]["album"]["images"] else "no_img",
+                                        songs[picked_tracks[0]]["track"]["album"]["images"] else "no_img",
                                     "name": songs[picked_tracks[0]]["track"]["name"],
                                     "uri": songs[picked_tracks[0]]["track"]["uri"],
                                     "artists": ", ".join([artist["name"] for artist in \
-                                                songs[picked_tracks[0]]["track"]["artists"]])
+                                                          songs[picked_tracks[0]]["track"]["artists"]])
                                 })
                                 picked_tracks.popleft()
                                 b += 1
@@ -331,6 +331,7 @@ def playlist_for_songs():
                     if new_token:
                         user_store[current_user.u_id]["access_token"] = new_token
                         current_user.access_token = new_token
+                        headers = {'Authorization': f"Bearer {current_user.access_token}"}
                         res = requests.get(next_url, headers=headers)
                         res_data = res.json()
                         if res.status_code != 200:
@@ -359,7 +360,9 @@ def playlist_for_songs():
                             })
                     next_url = res_data.get('next', None)
 
-            return render_template('playlist_for_songs.html', playlists=playlists)
+            sorting_option = request.form.get('song_sorting', 'no_sort')
+            return render_template('playlist_for_songs.html', playlists=playlists,
+                                   sorting_option=sorting_option)
     else:
         return redirect(url_for('index'))
 
@@ -373,17 +376,20 @@ def confirm_playlist_song():
             if request.method == 'POST':
                 selected_playlist = request.form.get('playlist_option', None)
                 new_playlist_name = request.form.get('new_playlist_name', None)
+                sorting_option = request.form.get('song_sorting', 'no_sort')
                 if selected_playlist:
                     selected_playlist_id, selected_playlist_name, snapshot_id = selected_playlist.split(' || ')
                     return render_template('confirm_playlist_song.html',
                                            selected_playlist_id=selected_playlist_id,
                                            selected_playlist_name=selected_playlist_name,
-                                           snapshot_id=snapshot_id)
+                                           snapshot_id=snapshot_id,
+                                           sorting_option=sorting_option)
                 elif new_playlist_name:
                     return render_template('confirm_playlist_song.html',
                                            selected_playlist_id='',
                                            selected_playlist_name=new_playlist_name,
-                                           snapshot_id='')
+                                           snapshot_id='',
+                                           sorting_option=sorting_option)
             return redirect(url_for('index'))
     else:
         return redirect(url_for('index'))
@@ -399,6 +405,7 @@ def add_songs():
                 playlist_id = request.form.get('playlist_id', None)
                 playlist_name = request.form.get('playlist_name', None)
                 snapshot_id = request.form.get('snapshot_id', None)
+                sorting_option = request.form.get('song_sorting', 'no_sort')
 
                 if playlist_id or playlist_name:
                     if playlist_id == '' or playlist_id is None:  # Create new playlist
@@ -489,7 +496,7 @@ def add_songs():
                         while tracks:
                             tracks_to_delete = []
                             count = 100
-                            while count != 0 and tracks:  # Only append 100 songs.
+                            while count != 0 and tracks:  # Only append 100 songs (max 100 for deletion at once).
                                 tracks_to_delete.append({'uri': tracks.popleft()})
                                 count -= 1
 
@@ -532,15 +539,26 @@ def add_songs():
                             elif res.status_code == 200:
                                 snapshot_id = res_data.get('snapshot_id', None)
 
-
                         # Insertion code here
                         headers = {
                             'Authorization': f"Bearer {current_user.access_token}",
                             'Content-Type': 'application/json'
                         }
 
+                        if sorting_option == 'song_name_asc':
+                            uris = [i['uri'] for i in sorted(user_store[current_user.u_id]["picked_songs"],
+                                                             key=lambda k: k['title'])]
+                        elif sorting_option == 'song_name_desc':
+                            uris = [i['uri'] for i in sorted(user_store[current_user.u_id]["picked_songs"],
+                                                             key=lambda k: k['title'], reverse=True)]
+                        elif sorting_option == 'random':
+                            random.seed(secrets.randbelow(100000))
+                            uris = [i['uri'] for i in random.shuffle(user_store[current_user.u_id]["picked_songs"])]
+                        else:
+                            uris = [i['uri'] for i in user_store[current_user.u_id]["picked_songs"]]
+
                         payload = {
-                            'uris': [i['uri'] for i in user_store[current_user.u_id]["picked_songs"]],
+                            uris
                         }
 
                         next_url = f'https://api.spotify.com/v1/playlists/{playlist_id}/tracks'
@@ -570,7 +588,7 @@ def add_songs():
                             return redirect(url_for('logout'))
 
                         elif res.status_code == 201:
-                            return render_template('generation_done.html',)
+                            return render_template('generation_done.html', )
 
         return redirect(url_for('index'))
     else:
