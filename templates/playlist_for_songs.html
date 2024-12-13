@@ -25,7 +25,8 @@
                 <div id="content">
                     <form method="post" action="/confirm_playlist_song">
                         <label id="playlist_name_label" for="new_playlist_name">Or type in new playlist name:</label>
-                        <input type="text" id="new_playlist_name" name="new_playlist_name" required value="My 100 songs">
+                        <input type="text" id="new_playlist_name" name="new_playlist_name" required value="My 100 songs ">
+                        <input type="hidden" name="song_sorting" value="{{ song_sorting }}">
                         <button id="create_playlist_btn" type="submit">Create new playlist</button>
                     </form>
 
@@ -45,6 +46,7 @@
                                 </div>
                             {% endfor %}
                         </div>
+                        <input type="hidden" name="song_sorting" value="{{ song_sorting }}">
                         <button id="create_playlist_btn" type="submit">Choose this playlist to replace.</button>
                     </form>
                 </div>

@@ -32,11 +32,28 @@
                                     <p class="song_img_container"><img src="{{ song['img'] }}" alt="Song cover image"></p>
                                 {% endif %}
                                 <p class="song_name">{{ song["name"] }}</p>
-                                <p class="song_artists">{{ song["artists"] }} </p>
+                                <p class="song_artists">{{ song["artists"] }}</p>
                             </div>
                         {% endfor %}
                     </div>
                     <form method="post" action="/playlist_for_songs">
+                        <p>Choose a sort to be applied on the randomly selected songs:</p>
+                        <div class="sorting_options">
+                            <input type="radio" name="song_sorting" id="no_sorting" value="no_sort" required checked>
+                            <label class="playlist_name" for="no_sorting">No sorting</label>
+                        </div>
+                        <div class="sorting_options">
+                            <input type="radio" name="song_sorting" id="name_asc" value="song_name_asc" required>
+                            <label class="playlist_name" for="name_asc">Song name ascending (A-Z)</label>
+                        </div>
+                        <div class="sorting_options">
+                            <input type="radio" name="song_sorting" id="name_desc" value="song_name_desc" required>
+                            <label class="playlist_name" for="name_desc">Song name descending (Z-A)</label>
+                        </div>
+                        <div class="sorting_options">
+                            <input type="radio" name="song_sorting" id="random_sorting" value="random" required>
+                            <label class="playlist_name" for="random_sorting">Randomised (shuffle)</label>
+                        </div>
                         <button id="create_playlist_btn" type="submit">Use these songs.</button>
                     </form>
                     <form method="post" action="/playlist_picked">

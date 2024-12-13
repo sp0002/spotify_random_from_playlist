@@ -360,9 +360,9 @@ def playlist_for_songs():
                             })
                     next_url = res_data.get('next', None)
 
-            sorting_option = request.form.get('song_sorting', 'no_sort')
+            song_sorting = request.form.get('song_sorting', 'no_sort')
             return render_template('playlist_for_songs.html', playlists=playlists,
-                                   sorting_option=sorting_option)
+                                   song_sorting=song_sorting)
     else:
         return redirect(url_for('index'))
 
@@ -376,20 +376,20 @@ def confirm_playlist_song():
             if request.method == 'POST':
                 selected_playlist = request.form.get('playlist_option', None)
                 new_playlist_name = request.form.get('new_playlist_name', None)
-                sorting_option = request.form.get('song_sorting', 'no_sort')
+                song_sorting = request.form.get('song_sorting', 'no_sort')
                 if selected_playlist:
                     selected_playlist_id, selected_playlist_name, snapshot_id = selected_playlist.split(' || ')
                     return render_template('confirm_playlist_song.html',
                                            selected_playlist_id=selected_playlist_id,
                                            selected_playlist_name=selected_playlist_name,
                                            snapshot_id=snapshot_id,
-                                           sorting_option=sorting_option)
+                                           song_sorting=song_sorting)
                 elif new_playlist_name:
                     return render_template('confirm_playlist_song.html',
                                            selected_playlist_id='',
                                            selected_playlist_name=new_playlist_name,
                                            snapshot_id='',
-                                           sorting_option=sorting_option)
+                                           song_sorting=song_sorting)
             return redirect(url_for('index'))
     else:
         return redirect(url_for('index'))
@@ -405,7 +405,7 @@ def add_songs():
                 playlist_id = request.form.get('playlist_id', None)
                 playlist_name = request.form.get('playlist_name', None)
                 snapshot_id = request.form.get('snapshot_id', None)
-                sorting_option = request.form.get('song_sorting', 'no_sort')
+                song_sorting = request.form.get('song_sorting', 'no_sort')
 
                 if playlist_id or playlist_name:
                     if playlist_id == '' or playlist_id is None:  # Create new playlist
@@ -545,20 +545,20 @@ def add_songs():
                             'Content-Type': 'application/json'
                         }
 
-                        if sorting_option == 'song_name_asc':
+                        if song_sorting == 'song_name_asc':
                             uris = [i['uri'] for i in sorted(user_store[current_user.u_id]["picked_songs"],
-                                                             key=lambda k: k['title'])]
-                        elif sorting_option == 'song_name_desc':
+                                                             key=lambda k: k['name'])]
+                        elif song_sorting == 'song_name_desc':
                             uris = [i['uri'] for i in sorted(user_store[current_user.u_id]["picked_songs"],
-                                                             key=lambda k: k['title'], reverse=True)]
-                        elif sorting_option == 'random':
+                                                             key=lambda k: k['name'], reverse=True)]
+                        elif song_sorting == 'random':
                             random.seed(secrets.randbelow(100000))
-                            uris = [i['uri'] for i in random.shuffle(user_store[current_user.u_id]["picked_songs"])]
+                            uris = [i['uri'] for i in random.sample(user_store[current_user.u_id]["picked_songs"], 100)]
                         else:
                             uris = [i['uri'] for i in user_store[current_user.u_id]["picked_songs"]]
 
                         payload = {
-                            uris
+                            'uris': uris
                         }
 
                         next_url = f'https://api.spotify.com/v1/playlists/{playlist_id}/tracks'
