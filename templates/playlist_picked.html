@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
-    <title>100 picked songs</title>
+    <title>{{ num_songs }} picked songs</title>
 </head>
 <body>
     <div id="top">
@@ -20,7 +20,7 @@
         <div id="info_container2">
             <div id="info_container3">
                 <div id="description">
-                    Here are the 100 random songs:
+                    Here are the {{ num_songs }} random songs:
                 </div>
                 <div id="content">
                     <div id="songs_list">

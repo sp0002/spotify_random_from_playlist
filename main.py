@@ -96,7 +96,7 @@ def refresh(refresh_token):
 def index():
     if current_user.is_authenticated:  # Logged in? Redirect.
         return redirect(url_for("playlist_picker"))
-    return render_template('index.html')
+    return render_template('index.html', num_songs=NUM_SONGS)
 
 
 @app.route('/login', methods=['GET'])
@@ -230,7 +230,7 @@ def playlist_picker():
                             })
                 next_url = res_data.get('next', None)
 
-            return render_template('playlist_picker.html', playlists=playlists)
+            return render_template('playlist_picker.html', playlists=playlists, num_songs=NUM_SONGS)
     else:
         return redirect(url_for('index'))
 
@@ -291,7 +291,9 @@ def playlist_picked():
                                         songs[picked_tracks[0]]["track"]["album"]["images"] else "no_img",
                                     "name": songs[picked_tracks[0]]["track"]["name"],
                                     "uri": songs[picked_tracks[0]]["track"]["uri"],
-                                    "artists": ", ".join([artist["name"] for artist in \
+                                    "artists": ", ".join([artist["name"] if \
+                                                          songs[picked_tracks[0]]["track"]["artists"] is not None \
+                                                          else "-" for artist in \
                                                           songs[picked_tracks[0]]["track"]["artists"]])
                                 })
                                 picked_tracks.popleft()
@@ -305,7 +307,7 @@ def playlist_picked():
             user_store[current_user.u_id]["picked_songs"] = picked_songs
 
             return render_template('playlist_picked.html', picked_songs=picked_songs,
-                                   selected_playlist=selected_playlist)
+                                   selected_playlist=selected_playlist, num_songs=NUM_SONGS)
         return redirect(url_for('index'))
     else:
         return redirect(url_for('index'))
@@ -362,7 +364,7 @@ def playlist_for_songs():
 
             song_sorting = request.form.get('song_sorting', 'no_sort')
             return render_template('playlist_for_songs.html', playlists=playlists,
-                                   song_sorting=song_sorting)
+                                   song_sorting=song_sorting, num_songs=NUM_SONGS)
     else:
         return redirect(url_for('index'))
 
@@ -428,7 +430,10 @@ def add_songs():
                             if new_token:
                                 user_store[current_user.u_id]["access_token"] = new_token
                                 current_user.access_token = new_token
-                                headers = {'Authorization': f"Bearer {current_user.access_token}"}
+                                headers = {
+                                    'Authorization': f"Bearer {current_user.access_token}",
+                                    'Content-Type': 'application/json'
+                                }
                                 res = requests.post(next_url, headers=headers, data=payload)
                                 res_data = res.json()
                                 if res.status_code != 200:
@@ -521,7 +526,10 @@ def add_songs():
                                 if new_token:
                                     user_store[current_user.u_id]["access_token"] = new_token
                                     current_user.access_token = new_token
-                                    headers = {'Authorization': f"Bearer {current_user.access_token}"}
+                                    headers = {
+                                        'Authorization': f"Bearer {current_user.access_token}",
+                                        'Content-Type': 'application/json'
+                                    }
                                     res = requests.delete(next_url, headers=headers, json=payload)
                                     res_data = res.json()
                                     if res.status_code != 200:
@@ -533,62 +541,67 @@ def add_songs():
 
                             elif res.status_code != 200:
                                 print('An error occurred:',
-                                      res_data.get('error', 'No error message returned.'))
+                                      res_data.get('error', 'No error message returned.'), 'deletion')
                                 return redirect(url_for('logout'))
 
                             elif res.status_code == 200:
                                 snapshot_id = res_data.get('snapshot_id', None)
 
                         # Insertion code here
+                        if song_sorting == 'song_name_asc':
+                            uris = [i['uri'] for i in sorted(user_store[current_user.u_id]["picked_songs"],
+                                                             key=lambda k: k['name'].upper())]
+                        elif song_sorting == 'song_name_desc':
+                            uris = [i['uri'] for i in sorted(user_store[current_user.u_id]["picked_songs"],
+                                                             key=lambda k: k['name'].upper(), reverse=True)]
+                        elif song_sorting == 'random':
+                            random.seed(secrets.randbelow(100000))
+                            uris = [i['uri'] for i in random.sample(user_store[current_user.u_id]["picked_songs"],
+                                                                    NUM_SONGS)]
+                        else:
+                            uris = [i['uri'] for i in user_store[current_user.u_id]["picked_songs"]]
+
+
                         headers = {
                             'Authorization': f"Bearer {current_user.access_token}",
                             'Content-Type': 'application/json'
                         }
-
-                        if song_sorting == 'song_name_asc':
-                            uris = [i['uri'] for i in sorted(user_store[current_user.u_id]["picked_songs"],
-                                                             key=lambda k: k['name'])]
-                        elif song_sorting == 'song_name_desc':
-                            uris = [i['uri'] for i in sorted(user_store[current_user.u_id]["picked_songs"],
-                                                             key=lambda k: k['name'], reverse=True)]
-                        elif song_sorting == 'random':
-                            random.seed(secrets.randbelow(100000))
-                            uris = [i['uri'] for i in random.sample(user_store[current_user.u_id]["picked_songs"], 100)]
-                        else:
-                            uris = [i['uri'] for i in user_store[current_user.u_id]["picked_songs"]]
-
-                        payload = {
-                            'uris': uris
-                        }
-
                         next_url = f'https://api.spotify.com/v1/playlists/{playlist_id}/tracks'
-                        res = requests.post(next_url, headers=headers, json=payload)
-                        res_data = res.json()
 
-                        if res.status_code == 401:
-                            print('Bad or expired token:',
-                                  res_data.get('error', 'No error message returned.'))
-                            new_token = refresh(current_user.refresh_token)
-                            if new_token:
-                                user_store[current_user.u_id]["access_token"] = new_token
-                                current_user.access_token = new_token
-                                headers = {'Authorization': f"Bearer {current_user.access_token}"}
-                                res = requests.post(next_url, headers=headers, json=payload)
-                                res_data = res.json()
-                                if res.status_code != 200:
-                                    print('Error occurred even after access token refresh. Error:',
-                                          res_data.get('error', 'No error message returned.'), res.status_code)
+                        while uris:
+                            payload = {
+                                'uris': uris[:100]
+                            }
+                            res = requests.post(next_url, headers=headers, json=payload)
+                            res_data = res.json()
+                            if res.status_code == 401:
+                                print('Bad or expired token:',
+                                      res_data.get('error', 'No error message returned.'))
+                                new_token = refresh(current_user.refresh_token)
+                                if new_token:
+                                    user_store[current_user.u_id]["access_token"] = new_token
+                                    current_user.access_token = new_token
+                                    headers = {
+                                        'Authorization': f"Bearer {current_user.access_token}",
+                                        'Content-Type': 'application/json'
+                                    }
+                                    res = requests.post(next_url, headers=headers, json=payload)
+                                    res_data = res.json()
+                                    if res.status_code != 200:
+                                        print('Error occurred even after access token refresh. Error:',
+                                              res_data.get('error', 'No error message returned.'), res.status_code)
+                                        return redirect(url_for('logout'))
+                                else:
                                     return redirect(url_for('logout'))
-                            else:
+
+                            elif res.status_code != 201:
+                                print('An error occurred:',
+                                      res_data.get('error', 'No error message returned.'))
                                 return redirect(url_for('logout'))
 
-                        elif res.status_code != 201:
-                            print('An error occurred:',
-                                  res_data.get('error', 'No error message returned.'))
-                            return redirect(url_for('logout'))
+                            uris = uris[100:]
 
-                        elif res.status_code == 201:
-                            return render_template('generation_done.html', )
+                        return render_template('generation_done.html', )
 
         return redirect(url_for('index'))
     else:
