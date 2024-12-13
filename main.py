@@ -202,12 +202,12 @@ def playlist_picker():
                     if new_token:
                         user_store[current_user.u_id]["access_token"] = new_token
                         current_user.access_token = new_token
+                        headers = {'Authorization': f"Bearer {current_user.access_token}"}
                         res = requests.get(next_url, headers=headers)
                         res_data = res.json()
                         if res.status_code != 200:
                             print('Error occurred even after access token refresh. Error:',
                                   res_data.get('error', 'No error message returned.'), res.status_code)
-                            print(res_data, "data")
                             return redirect(url_for('logout'))
                     else:
                         print('Failed to get access_token even after refresh.')
@@ -259,6 +259,7 @@ def playlist_picked():
                     if new_token:
                         user_store[current_user.u_id]["access_token"] = new_token
                         current_user.access_token = new_token
+                        headers = {'Authorization': f"Bearer {current_user.access_token}"}
                         res = requests.get(next_url, headers=headers)
                         res_data = res.json()
                         if res.status_code != 200:
@@ -420,6 +421,7 @@ def add_songs():
                             if new_token:
                                 user_store[current_user.u_id]["access_token"] = new_token
                                 current_user.access_token = new_token
+                                headers = {'Authorization': f"Bearer {current_user.access_token}"}
                                 res = requests.post(next_url, headers=headers, data=payload)
                                 res_data = res.json()
                                 if res.status_code != 200:
@@ -456,6 +458,7 @@ def add_songs():
                                 if new_token:
                                     user_store[current_user.u_id]["access_token"] = new_token
                                     current_user.access_token = new_token
+                                    headers = {'Authorization': f"Bearer {current_user.access_token}"}
                                     res = requests.get(next_url, headers=headers)
                                     res_data = res.json()
                                     if res.status_code != 200:
@@ -511,6 +514,7 @@ def add_songs():
                                 if new_token:
                                     user_store[current_user.u_id]["access_token"] = new_token
                                     current_user.access_token = new_token
+                                    headers = {'Authorization': f"Bearer {current_user.access_token}"}
                                     res = requests.delete(next_url, headers=headers, json=payload)
                                     res_data = res.json()
                                     if res.status_code != 200:
@@ -550,6 +554,7 @@ def add_songs():
                             if new_token:
                                 user_store[current_user.u_id]["access_token"] = new_token
                                 current_user.access_token = new_token
+                                headers = {'Authorization': f"Bearer {current_user.access_token}"}
                                 res = requests.post(next_url, headers=headers, json=payload)
                                 res_data = res.json()
                                 if res.status_code != 200:
