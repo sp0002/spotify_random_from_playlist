@@ -41,6 +41,9 @@ Go to any browser and go to https://localhost:5005/callback.
 ## Changing the number of songs generated
 Change NUM_SONGS in .env
 
+## Limitations
+The Spotify web API is unable to set playlists private, only unpublished (called private in the API).
+
 ## Assumptions
 You have Spotify premium.
 

@@ -218,6 +218,7 @@ def playlist_picker():
                           res.status_code)
                     return redirect(url_for('logout'))
 
+                # Status code 200, ok.
                 for i in res_data.get('items', None):
                     if i:
                         if int(i["tracks"]["total"]) > NUM_SONGS:
@@ -273,36 +274,36 @@ def playlist_picked():
                     print('An error occurred:', res_data.get('error', 'No error message returned.'))
                     return redirect(url_for('logout'))
 
-                elif res.status_code == 200:
-                    if latch:
-                        i = res_data
-                    else:
-                        latch = True
-                        i = res_data.get('tracks')
-                    if i:
-                        songs = i['items']
-                        if songs:
-                            b = 0
-                            while picked_tracks and picked_tracks[0] < 100:
-                                picked_songs.append({
-                                    "id": songs[picked_tracks[0]]["track"]["id"],
-                                    # img might be empty.
-                                    "img": songs[picked_tracks[0]]["track"]["album"]["images"][-1]["url"] if \
-                                        songs[picked_tracks[0]]["track"]["album"]["images"] else "no_img",
-                                    "name": songs[picked_tracks[0]]["track"]["name"],
-                                    "uri": songs[picked_tracks[0]]["track"]["uri"],
-                                    "artists": ", ".join([artist["name"] if \
-                                                          songs[picked_tracks[0]]["track"]["artists"] is not None \
-                                                          else "-" for artist in \
-                                                          songs[picked_tracks[0]]["track"]["artists"]])
-                                })
-                                picked_tracks.popleft()
-                                b += 1
-                        next_url = i.get('next', None)
+                # Status code 200, ok.
+                if latch:
+                    i = res_data
+                else:
+                    latch = True
+                    i = res_data.get('tracks')
+                if i:
+                    songs = i['items']
+                    if songs:
+                        b = 0
+                        while picked_tracks and picked_tracks[0] < 100:
+                            picked_songs.append({
+                                "id": songs[picked_tracks[0]]["track"]["id"],
+                                # img might be empty.
+                                "img": songs[picked_tracks[0]]["track"]["album"]["images"][-1]["url"] if \
+                                    songs[picked_tracks[0]]["track"]["album"]["images"] else "no_img",
+                                "name": songs[picked_tracks[0]]["track"]["name"],
+                                "uri": songs[picked_tracks[0]]["track"]["uri"],
+                                "artists": ", ".join([artist["name"] if \
+                                                      songs[picked_tracks[0]]["track"]["artists"] is not None \
+                                                      else "-" for artist in \
+                                                      songs[picked_tracks[0]]["track"]["artists"]])
+                            })
+                            picked_tracks.popleft()
+                            b += 1
+                    next_url = i.get('next', None)
 
-                        for j in range(len(picked_tracks)):
-                            picked_tracks[j] -= 100
-                        num_tracks -= 100
+                    for j in range(len(picked_tracks)):
+                        picked_tracks[j] -= 100
+                    num_tracks -= 100
 
             user_store[current_user.u_id]["picked_songs"] = picked_songs
 
@@ -349,18 +350,18 @@ def playlist_for_songs():
                           res.status_code)
                     return redirect(url_for('logout'))
 
-                elif res.status_code == 200:
-                    for i in res_data.get('items', None):
-                        if i:
-                            playlists.append({
-                                "id": i["id"],
-                                "img": i["images"][-1]["url"] if i["images"] else "no_img",
-                                # Might be empty.
-                                "name": i["name"],
-                                "total_tracks": i["tracks"]["total"],
-                                "snapshot_id": i["snapshot_id"]
-                            })
-                    next_url = res_data.get('next', None)
+                # Status code 200, ok.
+                for i in res_data.get('items', None):
+                    if i:
+                        playlists.append({
+                            "id": i["id"],
+                            "img": i["images"][-1]["url"] if i["images"] else "no_img",
+                            # Might be empty.
+                            "name": i["name"],
+                            "total_tracks": i["tracks"]["total"],
+                            "snapshot_id": i["snapshot_id"]
+                        })
+                next_url = res_data.get('next', None)
 
             song_sorting = request.form.get('song_sorting', 'no_sort')
             return render_template('playlist_for_songs.html', playlists=playlists,
@@ -418,8 +419,8 @@ def add_songs():
                         next_url = f'https://api.spotify.com/v1/users/{current_user.u_id}/playlists'
                         payload = json.dumps({
                             "name": playlist_name,
+                            "public": False,  # This "private" just refers to not being published on profile.
                             "description": "Custom playlist",
-                            "public": False
                         })
                         res = requests.post(next_url, headers=headers, data=payload)
                         res_data = res.json()
@@ -448,9 +449,10 @@ def add_songs():
                                   res_data.get('error', 'No error message returned. 1'), res.status_code)
                             return redirect(url_for('logout'))
 
-                        elif res.status_code == 201:
+                        if res.status_code == 201:
                             playlist_id = res_data.get('id')
 
+                    print(res_data)
                     if not playlist_id:  # No ID?
                         return redirect(url_for('index'))
 
@@ -485,18 +487,18 @@ def add_songs():
                                       res_data.get('error', 'No error message returned.'))
                                 return redirect(url_for('logout'))
 
-                            elif res.status_code == 200:
-                                if res_data.get('tracks', None):
-                                    i = res_data.get('tracks')
-                                else:
-                                    i = res_data
-                                if i:
-                                    songs = i['items']
-                                    if songs:
-                                        for song in songs:
-                                            tracks.append(song["track"]["uri"])
+                            # Status code 200, ok.
+                            if res_data.get('tracks', None):
+                                i = res_data.get('tracks')
+                            else:
+                                i = res_data
+                            if i:
+                                songs = i['items']
+                                if songs:
+                                    for song in songs:
+                                        tracks.append(song["track"]["uri"])
 
-                                    next_url = i.get('next', None)
+                                next_url = i.get('next', None)
 
                         while tracks:
                             tracks_to_delete = []
@@ -544,8 +546,8 @@ def add_songs():
                                       res_data.get('error', 'No error message returned.'), 'deletion')
                                 return redirect(url_for('logout'))
 
-                            elif res.status_code == 200:
-                                snapshot_id = res_data.get('snapshot_id', None)
+                            # Status code 200, ok.
+                            snapshot_id = res_data.get('snapshot_id', None)
 
                         # Insertion code here
                         if song_sorting == 'song_name_asc':
