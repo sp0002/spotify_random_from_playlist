@@ -452,7 +452,6 @@ def add_songs():
                         if res.status_code == 201:
                             playlist_id = res_data.get('id')
 
-                    print(res_data)
                     if not playlist_id:  # No ID?
                         return redirect(url_for('index'))
 
